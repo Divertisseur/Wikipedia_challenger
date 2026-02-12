@@ -1,0 +1,7 @@
+requests
+tqdm
+PyQt6
+sentence-transformers
+nltk
+numpy
+torch
