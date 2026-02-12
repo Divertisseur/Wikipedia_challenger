@@ -71,16 +71,26 @@ class AdvancedSimilarityEngine:
         words = _WORD_RE.findall(text.lower())
         return {self.stemmer.stem(w) for w in words}
 
-    def score_batch(self, titles: List[str]) -> np.ndarray:
+    def score_batch(self, titles: List[str], descriptions: Optional[Dict[str, str]] = None) -> np.ndarray:
         """Calculate scores for a batch of titles based on configuration."""
         if not titles:
             return np.array([])
         
         count = len(titles)
+        descriptions = descriptions or {}
         
         # 1. Semantic Scores
         if self.use_semantic and self.model and self.target_embedding is not None:
-             embeddings = self.model.encode(titles, convert_to_tensor=True)
+             # Enhance titles with descriptions for richer context
+             text_to_encode = []
+             for t in titles:
+                 desc = descriptions.get(t, "")
+                 if desc:
+                     text_to_encode.append(f"{t}: {desc}")
+                 else:
+                     text_to_encode.append(t)
+                     
+             embeddings = self.model.encode(text_to_encode, convert_to_tensor=True)
              semantic_scores = util.cos_sim(embeddings, self.target_embedding).flatten().cpu().numpy()
         else:
              semantic_scores = np.zeros(count)
@@ -269,7 +279,13 @@ class WikipediaChallenger:
                                 PrioritizedItem((0.0, counter), (link, path + [link]))
                             )
                     elif valid_links:
-                        scores = self.similarity_engine.score_batch(valid_links)
+                        # Batch fetch descriptions (max 50 per batch)
+                        descriptions = {}
+                        for i in range(0, len(valid_links), 50):
+                            batch_links = valid_links[i:i+50]
+                            descriptions.update(self.api.get_metadata_batch(batch_links))
+                            
+                        scores = self.similarity_engine.score_batch(valid_links, descriptions)
                         for link, score in zip(valid_links, scores):
                             counter += 1
                             heapq.heappush(

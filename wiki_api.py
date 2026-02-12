@@ -1,6 +1,6 @@
 import requests
 import threading
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 
 class WikipediaAPI:
@@ -94,6 +94,40 @@ class WikipediaAPI:
         except Exception:
             return None
         return None
+
+    def get_metadata_batch(self, titles: List[str]) -> Dict[str, str]:
+        """
+        Fetches descriptions for a batch of titles (max 50).
+        Returns a mapping of title -> description.
+        """
+        if not titles:
+            return {}
+            
+        session = self._get_session()
+        params = {
+            "action": "query",
+            "format": "json",
+            "titles": "|".join(titles),
+            "prop": "description",
+            "redirects": 1,
+        }
+        
+        results = {}
+        try:
+            response = session.get(self.base_url, params=params)
+            response.raise_for_status()
+            data = response.json()
+            
+            pages = data.get("query", {}).get("pages", {})
+            for page_data in pages.values():
+                title = page_data.get("title")
+                description = page_data.get("description", "")
+                if title:
+                    results[title] = description
+        except Exception as e:
+            print(f"Error fetching metadata batch: {e}")
+            
+        return results
 
 
 if __name__ == "__main__":

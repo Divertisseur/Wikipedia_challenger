@@ -1,0 +1,14 @@
+Metadata Fetch: SUCCESS
+ - Barack Obama: President of the United States from 2009 to 2017
+ - Paris: Capital and largest city of France
+ - Python (programming language): General-purpose programming language
+
+Target: United States
+Barack Obama:
+  No desc: 0.2216
+  With desc: 0.1860
+  Diff: -0.0356
+Eiffel Tower:
+  No desc: 0.1086
+  With desc: 0.1113
+  Diff: 0.0027
