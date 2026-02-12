@@ -7,7 +7,7 @@ import sys
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QLineEdit, QComboBox, QPushButton, QTextEdit, QFrame,
-    QGroupBox, QSplitter, QSizePolicy
+    QGroupBox, QSplitter, QSizePolicy, QTextBrowser
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSize
 from PyQt6.QtGui import QFont, QColor, QIcon, QTextCursor
@@ -374,7 +374,7 @@ class MainWindow(QMainWindow):
         result_layout.addLayout(stats_row)
 
         # Path display
-        self.path_display = QTextEdit()
+        self.path_display = QTextBrowser()
         self.path_display.setReadOnly(True)
         self.path_display.setOpenExternalLinks(True)
         self.path_display.setMaximumHeight(150)
