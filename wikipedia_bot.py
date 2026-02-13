@@ -108,10 +108,21 @@ class AdvancedSimilarityEngine:
 
         combined_scores = []
         for i, title in enumerate(titles):
-            # 2. Lexical Score (Stemmed Overlap)
+            # 2. Lexical Score (Reach + Precision + Char similarity)
             current_words = self._get_stemmed_words(title)
-            if self.target_words_stemmed:
-                lexical_score = len(current_words & self.target_words_stemmed) / len(self.target_words_stemmed)
+            if self.target_words_stemmed and current_words:
+                # Reach: How many of the target words are found? (Bonus for matching)
+                intersection = current_words & self.target_words_stemmed
+                reach = len(intersection) / len(self.target_words_stemmed)
+                
+                # Precision: How much of the title is relevant? (Malus for excess words)
+                precision = len(intersection) / len(current_words)
+                
+                # Char similarity: Bonus for matching letters (handles near-misses and length)
+                char_sim = difflib.SequenceMatcher(None, title.lower(), self.target_title.lower()).ratio()
+                
+                # Weighted combination: Matches with fewer extra words are now ranked higher
+                lexical_score = (0.4 * reach) + (0.4 * precision) + (0.2 * char_sim)
             else:
                 lexical_score = 0.0
 

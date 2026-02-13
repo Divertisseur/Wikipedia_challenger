@@ -67,15 +67,15 @@ class SearchWorker(QThread):
 
 
 # ── Colour palette ──────────────────────────────────────────────────
-BG           = "#0f0f17"
-SURFACE      = "#1a1a2e"
-SURFACE_ALT  = "#16213e"
-ACCENT       = "#0f3460"
-HIGHLIGHT    = "#e94560"
-TEXT         = "#eaeaea"
-TEXT_DIM     = "#8a8a9a"
-SUCCESS      = "#00e676"
-BORDER       = "#2a2a4a"
+BG           = "#f8fafc"
+SURFACE      = "#ffffff"
+SURFACE_ALT  = "#f1f5f9"
+ACCENT       = "#3b82f6"
+HIGHLIGHT    = "#f43f5e"
+TEXT         = "#1e293b"
+TEXT_DIM     = "#64748b"
+SUCCESS      = "#10b981"
+BORDER       = "#e2e8f0"
 
 
 # ── Stylesheet ──────────────────────────────────────────────────────
@@ -93,7 +93,7 @@ QWidget {{
 QGroupBox {{
     background-color: {SURFACE};
     border: 1px solid {BORDER};
-    border-radius: 10px;
+    border-radius: 12px;
     margin-top: 14px;
     padding: 16px 12px 12px 12px;
     font-weight: 600;
@@ -117,7 +117,8 @@ QLineEdit {{
     selection-background-color: {HIGHLIGHT};
 }}
 QLineEdit:focus {{
-    border-color: {HIGHLIGHT};
+    border-color: {ACCENT};
+    background-color: {SURFACE};
 }}
 
 QComboBox {{
@@ -133,7 +134,8 @@ QComboBox::drop-down {{
 }}
 QComboBox QAbstractItemView {{
     background-color: {SURFACE};
-    selection-background-color: {ACCENT};
+    selection-background-color: {SURFACE_ALT};
+    selection-color: {ACCENT};
     border: 1px solid {BORDER};
     border-radius: 4px;
 }}
@@ -151,25 +153,28 @@ QPushButton#startBtn {{
     color: #ffffff;
 }}
 QPushButton#startBtn:hover {{
-    background-color: #ff5a75;
+    background-color: #fb7185;
 }}
 QPushButton#startBtn:pressed {{
-    background-color: #c8354d;
+    background-color: #e11d48;
 }}
 QPushButton#startBtn:disabled {{
-    background-color: #5a2030;
-    color: #888;
+    background-color: #fecaca;
+    color: #f43f5e;
 }}
 QPushButton#cancelBtn {{
     background-color: {ACCENT};
-    color: {TEXT};
+    color: #ffffff;
 }}
 QPushButton#cancelBtn:hover {{
-    background-color: #1a4a80;
+    background-color: #60a5fa;
+}}
+QPushButton#cancelBtn:pressed {{
+    background-color: #2563eb;
 }}
 QPushButton#cancelBtn:disabled {{
-    background-color: #0a1a30;
-    color: #555;
+    background-color: #dbeafe;
+    color: #3b82f6;
 }}
 
 /* ── Log area ──────────────────────────────────── */
@@ -180,7 +185,7 @@ QTextEdit {{
     padding: 10px;
     font-family: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
     font-size: 12px;
-    color: {TEXT_DIM};
+    color: {TEXT};
 }}
 
 /* ── Labels ────────────────────────────────────── */

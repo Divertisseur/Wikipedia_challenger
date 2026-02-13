@@ -1,0 +1,5 @@
+Target: France
+Title: France               Score: 1.000 (R: 1.00, P: 1.00, C: 1.00)
+Title: France en 1988       Score: 0.653 (R: 1.00, P: 0.33, C: 0.60)
+Title: Île-de-France        Score: 0.660 (R: 1.00, P: 0.33, C: 0.63)
+Title: Français             Score: 0.914 (R: 1.00, P: 1.00, C: 0.57)
