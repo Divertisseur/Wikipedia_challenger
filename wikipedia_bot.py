@@ -283,12 +283,13 @@ class WikipediaChallenger:
                     future = pool.submit(self.api.get_links, page)
                     future_map[future] = (page, path)
 
+                all_discovered: List[Tuple[str, List[str]]] = []
+                found_result = None
+
                 for future in as_completed(future_map):
                     if self._cancelled:
-                        self._log("Search cancelled by user.")
-                        if use_tqdm: pbar.close()
-                        return None
-
+                        break
+                    
                     page, path = future_map[future]
                     pages_explored += 1
                     if use_tqdm: pbar.update(1)
@@ -300,50 +301,66 @@ class WikipediaChallenger:
                         self._log(f"Skipping {page}: {e}")
                         continue
 
-                    valid_links = []
                     for link in links:
                         if link == end_norm:
                             total_time = time.time() - start_time
-                            if use_tqdm: pbar.close()
-                            return {
+                            found_result = {
                                 "path": path + [end_norm],
                                 "clicks": len(path),
                                 "time": total_time,
                                 "searched": pages_explored,
                             }
+                            break # find_shortest_path will return below
                         if link not in visited:
                             visited.add(link)
-                            valid_links.append(link)
-
-                    # Strategy:
-                    # 1. Bruteforce: Add all with priority=0 (FIFO by counter)
-                    # 2. Similarity: Calculate scores, add with priority=-score
+                            all_discovered.append((link, path + [link]))
                     
-                    if mode == "bruteforce":
-                        for link in valid_links:
-                            counter += 1
-                            heapq.heappush(
-                                heap,
-                                PrioritizedItem((0.0, counter), (link, path + [link]))
-                            )
-                    elif valid_links:
-                        # Batch fetch descriptions only if requested
-                        descriptions = {}
-                        if use_metadata:
-                            for i in range(0, len(valid_links), 50):
-                                batch_links = valid_links[i:i+50]
-                                descriptions.update(self.api.get_metadata_batch(batch_links))
-                            
-                        scores = self.similarity_engine.score_batch(valid_links, descriptions)
-                        for link, score in zip(valid_links, scores):
-                            counter += 1
-                            heapq.heappush(
-                                heap,
-                                PrioritizedItem(
-                                    (-score, counter),
-                                    (link, path + [link])
-                                )
-                            )
+                    if found_result:
+                        break
+
+                if found_result:
+                    if use_tqdm: pbar.close()
+                    return found_result
+
+                if self._cancelled:
+                    self._log("Search cancelled.")
+                    if use_tqdm: pbar.close()
+                    return None
+
+                # ── Batch Scoring ──────────────────────────────────────
+                if not all_discovered:
+                    continue
+
+                if mode == "bruteforce":
+                    for link, new_path in all_discovered:
+                        counter += 1
+                        heapq.heappush(heap, PrioritizedItem((0.0, counter), (link, new_path)))
+                else:
+                    titles = [item[0] for item in all_discovered]
+                    
+                    # Optional: limit metadata fetching to top N candidates to avoid API hammer
+                    descriptions = {}
+                    if use_metadata and len(titles) > 0:
+                        # 1. Preliminary score (titles only) to pick top candidates for metadata
+                        temp_scores = self.similarity_engine.score_batch(titles)
+                        # Sort indices by score descending
+                        top_indices = np.argsort(temp_scores)[::-1][:150] # Top 150 only
+                        top_titles = [titles[idx] for idx in top_indices]
+                        
+                        # 2. Fetch metadata for top candidates
+                        for i in range(0, len(top_titles), 50):
+                            batch_titles = top_titles[i : i + 50]
+                            descriptions.update(self.api.get_metadata_batch(batch_titles))
+                    
+                    # 3. Final score (with descriptions if available)
+                    scores = self.similarity_engine.score_batch(titles, descriptions)
+                    
+                    for (link, new_path), score in zip(all_discovered, scores):
+                        counter += 1
+                        heapq.heappush(
+                            heap,
+                            PrioritizedItem((-score, counter), (link, new_path))
+                        )
 
         if use_tqdm: pbar.close()
         return None

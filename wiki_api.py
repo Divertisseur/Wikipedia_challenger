@@ -1,4 +1,6 @@
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import threading
 from typing import List, Optional, Dict
 
@@ -6,7 +8,7 @@ from typing import List, Optional, Dict
 class WikipediaAPI:
     """
     A thread-safe wrapper for the Wikipedia Action API to fetch links from pages.
-    Each thread gets its own ``requests.Session`` via ``threading.local()``.
+    Uses a shared requests.Session with connection pooling for performance.
     """
 
     USER_AGENT = (
@@ -17,25 +19,27 @@ class WikipediaAPI:
     def __init__(self, lang: str = "en"):
         self.lang = lang
         self.base_url = f"https://{lang}.wikipedia.org/w/api.php"
-        self._local = threading.local()
+        
+        # Shared session with connection pooling and retries
+        self.session = requests.Session()
+        self.session.headers.update({"User-Agent": self.USER_AGENT})
+        
+        # Configure robust retries
+        retries = Retry(
+            total=5,
+            backoff_factor=0.5,
+            status_forcelist=[429, 500, 502, 503, 504],
+        )
+        # Pool size matches typical max threads
+        adapter = HTTPAdapter(pool_connections=20, pool_maxsize=20, max_retries=retries)
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
 
-    # ── Per-thread session ──────────────────────────────────────────
-    def _get_session(self) -> requests.Session:
-        """Return a ``requests.Session`` bound to the current thread."""
-        session = getattr(self._local, "session", None)
-        if session is None:
-            session = requests.Session()
-            session.headers.update({"User-Agent": self.USER_AGENT})
-            self._local.session = session
-        return session
-
-    # ── Public API ──────────────────────────────────────────────────
     def get_links(self, title: str) -> List[str]:
         """
         Fetches all internal links from a given Wikipedia page title.
-        Handles pagination to get all links.  Thread-safe.
+        Handles pagination to get all links. Thread-safe.
         """
-        session = self._get_session()
         links: List[str] = []
         params = {
             "action": "query",
@@ -49,7 +53,8 @@ class WikipediaAPI:
 
         while True:
             try:
-                response = session.get(self.base_url, params=params)
+                # 10s timeout to prevent hanging
+                response = self.session.get(self.base_url, params=params, timeout=10)
                 response.raise_for_status()
                 data = response.json()
 
@@ -66,7 +71,7 @@ class WikipediaAPI:
                 else:
                     break
             except Exception as e:
-                print(f"Error fetching links for {title}: {e}")
+                # print(f"Error fetching links for {title}: {e}")
                 break
 
         return links
@@ -75,7 +80,6 @@ class WikipediaAPI:
         """
         Validates if a page exists and returns its normalized title.
         """
-        session = self._get_session()
         params = {
             "action": "query",
             "format": "json",
@@ -83,7 +87,7 @@ class WikipediaAPI:
             "redirects": 1,
         }
         try:
-            response = session.get(self.base_url, params=params)
+            response = self.session.get(self.base_url, params=params, timeout=10)
             response.raise_for_status()
             data = response.json()
             pages = data.get("query", {}).get("pages", {})
@@ -103,7 +107,6 @@ class WikipediaAPI:
         if not titles:
             return {}
             
-        session = self._get_session()
         params = {
             "action": "query",
             "format": "json",
@@ -114,7 +117,7 @@ class WikipediaAPI:
         
         results = {}
         try:
-            response = session.get(self.base_url, params=params)
+            response = self.session.get(self.base_url, params=params, timeout=10)
             response.raise_for_status()
             data = response.json()
             
@@ -125,7 +128,8 @@ class WikipediaAPI:
                 if title:
                     results[title] = description
         except Exception as e:
-            print(f"Error fetching metadata batch: {e}")
+            # print(f"Error fetching metadata batch: {e}")
+            pass
             
         return results
 

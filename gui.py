@@ -67,12 +67,12 @@ class SearchWorker(QThread):
 
 
 # ── Colour palette ──────────────────────────────────────────────────
-BG           = "#f8fafc"
+BG           = "#f1f5f9"
 SURFACE      = "#ffffff"
-SURFACE_ALT  = "#f1f5f9"
-ACCENT       = "#3b82f6"
-HIGHLIGHT    = "#f43f5e"
-TEXT         = "#1e293b"
+SURFACE_ALT  = "#f8fafc"
+ACCENT       = "#4f46e5"
+HIGHLIGHT    = "#6366f1"
+TEXT         = "#0f172a"
 TEXT_DIM     = "#64748b"
 SUCCESS      = "#10b981"
 BORDER       = "#e2e8f0"
@@ -93,39 +93,39 @@ QWidget {{
 QGroupBox {{
     background-color: {SURFACE};
     border: 1px solid {BORDER};
-    border-radius: 12px;
+    border-radius: 16px;
     margin-top: 14px;
-    padding: 16px 12px 12px 12px;
+    padding: 20px 16px 16px 16px;
     font-weight: 600;
     font-size: 14px;
 }}
 QGroupBox::title {{
     subcontrol-origin: margin;
-    left: 16px;
-    padding: 0 6px;
-    color: {HIGHLIGHT};
+    left: 20px;
+    padding: 0 8px;
+    color: {ACCENT};
 }}
 
 /* ── Inputs ────────────────────────────────────── */
 QLineEdit {{
     background-color: {SURFACE_ALT};
     border: 1px solid {BORDER};
-    border-radius: 6px;
-    padding: 8px 12px;
+    border-radius: 8px;
+    padding: 10px 14px;
     font-size: 14px;
     color: {TEXT};
     selection-background-color: {HIGHLIGHT};
 }}
 QLineEdit:focus {{
-    border-color: {ACCENT};
+    border-color: {HIGHLIGHT};
     background-color: {SURFACE};
 }}
 
 QComboBox {{
     background-color: {SURFACE_ALT};
     border: 1px solid {BORDER};
-    border-radius: 6px;
-    padding: 8px 12px;
+    border-radius: 8px;
+    padding: 10px 14px;
     min-width: 150px;
 }}
 QComboBox::drop-down {{
@@ -137,52 +137,54 @@ QComboBox QAbstractItemView {{
     selection-background-color: {SURFACE_ALT};
     selection-color: {ACCENT};
     border: 1px solid {BORDER};
-    border-radius: 4px;
+    border-radius: 8px;
 }}
 
 /* ── Buttons ───────────────────────────────────── */
 QPushButton {{
     border: none;
-    border-radius: 6px;
-    padding: 10px 28px;
+    border-radius: 8px;
+    padding: 12px 32px;
     font-weight: 700;
     font-size: 14px;
 }}
 QPushButton#startBtn {{
-    background-color: {HIGHLIGHT};
-    color: #ffffff;
-}}
-QPushButton#startBtn:hover {{
-    background-color: #fb7185;
-}}
-QPushButton#startBtn:pressed {{
-    background-color: #e11d48;
-}}
-QPushButton#startBtn:disabled {{
-    background-color: #fecaca;
-    color: #f43f5e;
-}}
-QPushButton#cancelBtn {{
     background-color: {ACCENT};
     color: #ffffff;
 }}
+QPushButton#startBtn:hover {{
+    background-color: #4338ca;
+}}
+QPushButton#startBtn:pressed {{
+    background-color: #3730a3;
+}}
+QPushButton#startBtn:disabled {{
+    background-color: #e2e8f0;
+    color: #94a3b8;
+}}
+QPushButton#cancelBtn {{
+    background-color: {SURFACE};
+    border: 1px solid {BORDER};
+    color: {TEXT_DIM};
+}}
 QPushButton#cancelBtn:hover {{
-    background-color: #60a5fa;
+    background-color: {SURFACE_ALT};
+    color: {TEXT};
 }}
 QPushButton#cancelBtn:pressed {{
-    background-color: #2563eb;
+    background-color: {BORDER};
 }}
 QPushButton#cancelBtn:disabled {{
-    background-color: #dbeafe;
-    color: #3b82f6;
+    background-color: {SURFACE};
+    color: {BORDER};
 }}
 
 /* ── Log area ──────────────────────────────────── */
 QTextEdit {{
     background-color: {SURFACE_ALT};
     border: 1px solid {BORDER};
-    border-radius: 8px;
-    padding: 10px;
+    border-radius: 12px;
+    padding: 12px;
     font-family: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
     font-size: 12px;
     color: {TEXT};
@@ -194,29 +196,33 @@ QLabel {{
     color: {TEXT_DIM};
 }}
 QLabel#titleLabel {{
-    font-size: 26px;
-    font-weight: 800;
-    color: {HIGHLIGHT};
-    padding: 4px 0;
+    font-size: 28px;
+    font-weight: 900;
+    color: {ACCENT};
+    padding: 6px 0;
 }}
 QLabel#subtitleLabel {{
     font-size: 13px;
     color: {TEXT_DIM};
-    padding-bottom: 8px;
+    padding-bottom: 12px;
 }}
 QLabel#resultTitle {{
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 700;
     color: {SUCCESS};
 }}
-QLabel#clicksLabel {{
+QLabel#clicksLabel, QLabel#timeLabel, QLabel#pagesLabel {{
     font-size: 36px;
     font-weight: 800;
     color: {HIGHLIGHT};
+    padding: 4px;
+    min-height: 50px;
 }}
 QLabel#timeLabel {{
-    font-size: 14px;
-    color: {TEXT_DIM};
+    color: {ACCENT};
+}}
+QLabel#pagesLabel {{
+    color: {SUCCESS};
 }}
 
 /* ── Frames / splitters ────────────────────────── */
@@ -232,84 +238,81 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Wikipedia Challenger")
-        self.setMinimumSize(QSize(720, 640))
-        self.resize(800, 700)
+        self.setMinimumSize(QSize(720, 700))
+        self.resize(800, 750)
         self.worker: SearchWorker | None = None
 
         central = QWidget()
         self.setCentralWidget(central)
         root = QVBoxLayout(central)
-        root.setContentsMargins(24, 18, 24, 18)
-        root.setSpacing(12)
+        root.setContentsMargins(20, 20, 20, 20)
+        root.setSpacing(16)
 
         # ── Header ─────────────────────────────────
+        header = QHBoxLayout()
         title = QLabel("🌐  Wikipedia Challenger")
         title.setObjectName("titleLabel")
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        root.addWidget(title)
-
-        subtitle = QLabel("Find the shortest path between any two Wikipedia pages")
+        header.addWidget(title)
+        header.addStretch()
+        
+        subtitle = QLabel("Shortest path bot")
         subtitle.setObjectName("subtitleLabel")
-        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        root.addWidget(subtitle)
+        header.addWidget(subtitle)
+        root.addLayout(header)
 
-        # ── Settings group ─────────────────────────
+        # ── Main Body (Side-by-Side) ──────────────
+        body = QHBoxLayout()
+        body.setSpacing(20)
+
+        # Left Column: Settings
+        left_col = QVBoxLayout()
+        left_col.setSpacing(12)
+        
         settings_group = QGroupBox("Search Settings")
+        settings_group.setFixedWidth(300)
         settings_layout = QVBoxLayout(settings_group)
-        settings_layout.setSpacing(10)
+        settings_layout.setSpacing(15)
 
-        # Row 1: Language
-        lang_row = QHBoxLayout()
+        # Language
         lang_label = QLabel("Language:")
-        lang_label.setFixedWidth(90)
         self.lang_combo = QComboBox()
         for display, code in LANGUAGES:
-            self.lang_combo.addItem(f"{display}  ({code})", code)
-        lang_row.addWidget(lang_label)
-        lang_row.addWidget(self.lang_combo, 1)
-        settings_layout.addLayout(lang_row)
+            self.lang_combo.addItem(f"{display} ({code})", code)
+        settings_layout.addWidget(lang_label)
+        settings_layout.addWidget(self.lang_combo)
 
-        # Row 2: Start page
-        start_row = QHBoxLayout()
+        # Start page
         start_label = QLabel("Start page:")
-        start_label.setFixedWidth(90)
         self.start_input = QLineEdit()
-        self.start_input.setPlaceholderText("e.g.  France")
-        start_row.addWidget(start_label)
-        start_row.addWidget(self.start_input, 1)
-        settings_layout.addLayout(start_row)
+        self.start_input.setPlaceholderText("e.g. France")
+        settings_layout.addWidget(start_label)
+        settings_layout.addWidget(self.start_input)
 
-        # Row 3: End page
-        end_row = QHBoxLayout()
+        # End page
         end_label = QLabel("End page:")
-        end_label.setFixedWidth(90)
         self.end_input = QLineEdit()
-        self.end_input.setPlaceholderText("e.g.  Europe")
-        end_row.addWidget(end_label)
-        end_row.addWidget(self.end_input, 1)
-        settings_layout.addLayout(end_row)
+        self.end_input.setPlaceholderText("e.g. Europe")
+        settings_layout.addWidget(end_label)
+        settings_layout.addWidget(self.end_input)
 
-        # Row 4: Search Method
-        method_row = QHBoxLayout()
-        method_label = QLabel("Method:")
-        method_label.setFixedWidth(90)
+        # Method
+        method_label = QLabel("Search Method:")
         self.method_combo = QComboBox()
         self.method_combo.addItem("Likely Path (Semantic AI)", "semantic")
         self.method_combo.addItem("Fast Guess (Word Match)", "lexical")
         self.method_combo.addItem("Brute Force (BFS)", "bruteforce")
-        method_row.addWidget(method_label)
-        method_row.addWidget(self.method_combo, 1)
-        settings_layout.addLayout(method_row)
+        settings_layout.addWidget(method_label)
+        settings_layout.addWidget(self.method_combo)
 
-        # Row 5: Intelligent Context Toggle
-        self.intelligent_check = QCheckBox("Intelligent Context (Improves celebrities, but slower)")
-        self.intelligent_check.setStyleSheet(f"color: {TEXT_DIM}; font-size: 12px; margin-top: 4px;")
+        # Toggle
+        self.intelligent_check = QCheckBox("Intelligent Context")
+        self.intelligent_check.setStyleSheet(f"color: {TEXT_DIM}; font-size: 12px;")
         settings_layout.addWidget(self.intelligent_check)
 
-        # Row 6: Buttons
-        btn_row = QHBoxLayout()
-        btn_row.addStretch()
-        self.start_btn = QPushButton("⛏  Start Mining")
+        settings_layout.addStretch()
+
+        # Buttons
+        self.start_btn = QPushButton("⛏  Start")
         self.start_btn.setObjectName("startBtn")
         self.start_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.start_btn.clicked.connect(self._on_start)
@@ -320,92 +323,74 @@ class MainWindow(QMainWindow):
         self.cancel_btn.setEnabled(False)
         self.cancel_btn.clicked.connect(self._on_cancel)
 
-        btn_row.addWidget(self.start_btn)
-        btn_row.addWidget(self.cancel_btn)
-        btn_row.addStretch()
-        settings_layout.addLayout(btn_row)
+        settings_layout.addWidget(self.start_btn)
+        settings_layout.addWidget(self.cancel_btn)
 
-        root.addWidget(settings_group)
+        left_col.addWidget(settings_group)
+        body.addLayout(left_col)
 
-        # ── Results / Log splitter ─────────────────
+        # Right Column: Results & Logs (Splitter)
         splitter = QSplitter(Qt.Orientation.Vertical)
         splitter.setHandleWidth(4)
 
         # Result panel
-        self.result_group = QGroupBox("Result")
+        self.result_group = QGroupBox("Results & Statistics")
         result_layout = QVBoxLayout(self.result_group)
+        
         self.result_title = QLabel("")
         self.result_title.setObjectName("resultTitle")
-        self.result_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         result_layout.addWidget(self.result_title)
 
         stats_row = QHBoxLayout()
-        stats_row.setSpacing(20)
+        stats_row.setSpacing(30)
 
-        # Clicks box
-        clicks_box = QVBoxLayout()
-        clicks_box.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        def create_stat_box(label_obj, caption):
+            box = QVBoxLayout()
+            box.addWidget(label_obj)
+            cap = QLabel(caption)
+            cap.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            box.addWidget(cap)
+            return box
+
         self.clicks_label = QLabel("–")
         self.clicks_label.setObjectName("clicksLabel")
         self.clicks_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        clicks_caption = QLabel("clicks")
-        clicks_caption.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        clicks_box.addWidget(self.clicks_label)
-        clicks_box.addWidget(clicks_caption)
-
-        # Time box
-        time_box = QVBoxLayout()
-        time_box.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
         self.time_label = QLabel("–")
         self.time_label.setObjectName("timeLabel")
         self.time_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.time_label.setStyleSheet(f"font-size: 36px; font-weight: 800; color: {ACCENT};")
-        time_caption = QLabel("seconds")
-        time_caption.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        time_box.addWidget(self.time_label)
-        time_box.addWidget(time_caption)
-
-        # Pages box
-        pages_box = QVBoxLayout()
-        pages_box.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
         self.pages_label = QLabel("–")
         self.pages_label.setObjectName("pagesLabel")
         self.pages_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.pages_label.setStyleSheet(f"font-size: 36px; font-weight: 800; color: {SUCCESS};")
-        pages_caption = QLabel("pages")
-        pages_caption.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        pages_box.addWidget(self.pages_label)
-        pages_box.addWidget(pages_caption)
 
-        stats_row.addStretch()
-        stats_row.addLayout(clicks_box)
-        stats_row.addLayout(time_box)
-        stats_row.addLayout(pages_box)
+        stats_row.addLayout(create_stat_box(self.clicks_label, "clicks"))
+        stats_row.addLayout(create_stat_box(self.time_label, "seconds"))
+        stats_row.addLayout(create_stat_box(self.pages_label, "pages"))
         stats_row.addStretch()
         result_layout.addLayout(stats_row)
 
-        # Path display
         self.path_display = QTextBrowser()
         self.path_display.setReadOnly(True)
         self.path_display.setOpenExternalLinks(True)
-        self.path_display.setMaximumHeight(150)
-        self.path_display.setPlaceholderText("Path will appear here after a successful search…")
-        result_layout.addWidget(self.path_display)
+        self.path_display.setPlaceholderText("The shortest path will appear here…")
+        result_layout.addWidget(self.path_display, 1) # Give it stretch
 
         splitter.addWidget(self.result_group)
 
         # Log panel
-        log_group = QGroupBox("Live Log")
+        log_group = QGroupBox("Live Activity")
         log_layout = QVBoxLayout(log_group)
         self.log_area = QTextEdit()
         self.log_area.setReadOnly(True)
-        self.log_area.setPlaceholderText("Search activity log…")
         log_layout.addWidget(self.log_area)
         splitter.addWidget(log_group)
 
-        splitter.setStretchFactor(0, 2)
-        splitter.setStretchFactor(1, 3)
-        root.addWidget(splitter, 1)
+        splitter.setStretchFactor(0, 3)
+        splitter.setStretchFactor(1, 1)
+        
+        body.addWidget(splitter, 1) # Rigth side stretches
+        root.addLayout(body)
 
         # Enter key triggers search
         self.start_input.returnPressed.connect(self._on_start)
