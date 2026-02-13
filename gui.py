@@ -7,7 +7,7 @@ import sys
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QLineEdit, QComboBox, QPushButton, QTextEdit, QFrame,
-    QGroupBox, QSplitter, QSizePolicy, QTextBrowser
+    QGroupBox, QSplitter, QSizePolicy, QTextBrowser, QCheckBox
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSize
 from PyQt6.QtGui import QFont, QColor, QIcon, QTextCursor
@@ -36,12 +36,13 @@ class SearchWorker(QThread):
     finished_signal = pyqtSignal(dict)   # emits the result dict
     error_signal = pyqtSignal(str)
 
-    def __init__(self, start: str, end: str, lang: str, mode: str):
+    def __init__(self, start: str, end: str, lang: str, mode: str, use_metadata: bool = False):
         super().__init__()
         self.start_page = start
         self.end_page = end
         self.lang = lang
         self.mode = mode
+        self.use_metadata = use_metadata
         self.bot: WikipediaChallenger | None = None
 
     def run(self):
@@ -51,7 +52,7 @@ class SearchWorker(QThread):
                 log_callback=self.log_signal.emit,
             )
             result = self.bot.find_shortest_path(
-                self.start_page, self.end_page, mode=self.mode
+                self.start_page, self.end_page, mode=self.mode, use_metadata=self.use_metadata
             )
             if result:
                 self.finished_signal.emit(result)
@@ -295,7 +296,12 @@ class MainWindow(QMainWindow):
         method_row.addWidget(self.method_combo, 1)
         settings_layout.addLayout(method_row)
 
-        # Row 5: Buttons
+        # Row 5: Intelligent Context Toggle
+        self.intelligent_check = QCheckBox("Intelligent Context (Improves celebrities, but slower)")
+        self.intelligent_check.setStyleSheet(f"color: {TEXT_DIM}; font-size: 12px; margin-top: 4px;")
+        settings_layout.addWidget(self.intelligent_check)
+
+        # Row 6: Buttons
         btn_row = QHBoxLayout()
         btn_row.addStretch()
         self.start_btn = QPushButton("⛏  Start Mining")
@@ -410,6 +416,7 @@ class MainWindow(QMainWindow):
 
         lang = self.lang_combo.currentData()
         mode = self.method_combo.currentData()
+        use_metadata = self.intelligent_check.isChecked()
 
         # Reset UI
         self.log_area.clear()
@@ -423,7 +430,7 @@ class MainWindow(QMainWindow):
         self._append_log(f"Starting search: \"{start}\" → \"{end}\" ({lang})")
         self._append_log(f"Method: {self.method_combo.currentText()}")
 
-        self.worker = SearchWorker(start, end, lang, mode)
+        self.worker = SearchWorker(start, end, lang, mode, use_metadata=use_metadata)
         self.worker.log_signal.connect(self._append_log)
         self.worker.finished_signal.connect(self._on_finished)
         self.worker.error_signal.connect(self._on_error)

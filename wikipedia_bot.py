@@ -174,7 +174,7 @@ class WikipediaChallenger:
         self.similarity_engine.set_target(target_title)
 
     def find_shortest_path(
-        self, start_title: str, end_title: str, mode: str = "semantic"
+        self, start_title: str, end_title: str, mode: str = "semantic", use_metadata: bool = False
     ) -> Optional[Dict]:
         self._cancelled = False
         start_time = time.time()
@@ -279,11 +279,12 @@ class WikipediaChallenger:
                                 PrioritizedItem((0.0, counter), (link, path + [link]))
                             )
                     elif valid_links:
-                        # Batch fetch descriptions (max 50 per batch)
+                        # Batch fetch descriptions only if requested
                         descriptions = {}
-                        for i in range(0, len(valid_links), 50):
-                            batch_links = valid_links[i:i+50]
-                            descriptions.update(self.api.get_metadata_batch(batch_links))
+                        if use_metadata:
+                            for i in range(0, len(valid_links), 50):
+                                batch_links = valid_links[i:i+50]
+                                descriptions.update(self.api.get_metadata_batch(batch_links))
                             
                         scores = self.similarity_engine.score_batch(valid_links, descriptions)
                         for link, score in zip(valid_links, scores):
@@ -328,6 +329,7 @@ def main():
     parser.add_argument("start", help="Starting Wikipedia page title", nargs="?")
     parser.add_argument("end", help="Ending Wikipedia page title", nargs="?")
     parser.add_argument("--lang", help="Wikipedia language code (default: en)", default="en")
+    parser.add_argument("--intelligent", help="Enable intelligent context (slower)", action="store_true")
 
     args = parser.parse_args()
     start, end, lang = args.start, args.end, args.lang
@@ -339,8 +341,9 @@ def main():
         if lang_input: lang = lang_input
 
     bot = WikipediaChallenger(lang=lang)
-    result = bot.find_shortest_path(start, end)
+    result = bot.find_shortest_path(start, end, use_metadata=args.intelligent)
     bot.print_report(result)
+
 
 
 if __name__ == "__main__":

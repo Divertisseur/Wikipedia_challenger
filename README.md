@@ -14,7 +14,7 @@ Wikipedia Challenger is an optimized pathfinder bot designed to find the shortes
   - **Time Taken**: Real-time performance tracking.
   - **Pages Searched**: New counter showing the total number of pages explored.
   - **Visual Path**: A tree view of the path taken, including clickable direct links in the GUI.
-- **Modern GUI**: A beautiful dark-themed PyQt6 desktop interface.
+- **Modern GUI**: A beautiful dark-themed PyQt6 desktop interface with optional **Intelligent Context** mode.
 
 ## 🛠️ Installation
 
@@ -40,8 +40,9 @@ python gui.py
 ### CLI Bot
 Run the search directly from the terminal:
 ```bash
-python wikipedia_bot.py "France" "Europe" --lang fr
+python wikipedia_bot.py "France" "Europe" --lang fr --intelligent
 ```
+*Note: Use `--intelligent` to improve celebrity searches (might be slower).*
 
 ### Debug & Testing
 Run a quick test script:
