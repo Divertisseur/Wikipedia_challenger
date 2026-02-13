@@ -19,6 +19,7 @@ from typing import Dict, List, Optional, Callable, Set, Any, Tuple
 
 import numpy as np
 import nltk
+import torch
 from nltk.stem import SnowballStemmer
 from sentence_transformers import SentenceTransformer, util
 from tqdm import tqdm
@@ -36,7 +37,7 @@ _WORD_RE = re.compile(r"[a-zA-Z0-9\u00C0-\u024F]+", re.UNICODE)
 # ── Advanced Similarity Engine ──────────────────────────────────────
 # ── Advanced Similarity Engine ──────────────────────────────────────
 class AdvancedSimilarityEngine:
-    def __init__(self, lang_code: str = "en", use_semantic: bool = True):
+    def __init__(self, lang_code: str = "en", use_semantic: bool = True, model_name: str = 'all-MiniLM-L6-v2'):
         self.use_semantic = use_semantic
         
         # Map Wikipedia code to NLTK language name
@@ -54,18 +55,27 @@ class AdvancedSimilarityEngine:
 
         # Load semantic model only if requested
         self.model = None
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        
         if self.use_semantic:
-            self.model = SentenceTransformer('all-MiniLM-L6-v2')
+            self.model = SentenceTransformer(model_name, device=self.device)
         
         self.target_embedding = None
         self.target_title = ""
         self.target_words_stemmed = set()
 
-    def set_target(self, target_title: str):
+    def set_target(self, target_title: str, target_description: str = ""):
         self.target_title = target_title
+        # Combine title and description for a richer target embedding
+        target_text = f"{target_description} ({target_title})" if target_description else target_title
+        
         self.target_words_stemmed = self._get_stemmed_words(target_title)
+        if target_description:
+            # Also add description words to lexical target to help context matching
+            self.target_words_stemmed.update(self._get_stemmed_words(target_description))
+            
         if self.use_semantic and self.model:
-            self.target_embedding = self.model.encode(target_title, convert_to_tensor=True)
+            self.target_embedding = self.model.encode(target_text, convert_to_tensor=True)
 
     def _get_stemmed_words(self, text: str) -> Set[str]:
         words = _WORD_RE.findall(text.lower())
@@ -86,7 +96,8 @@ class AdvancedSimilarityEngine:
              for t in titles:
                  desc = descriptions.get(t, "")
                  if desc:
-                     text_to_encode.append(f"{t}: {desc}")
+                     # Put description first to emphasize meaning over name tokens
+                     text_to_encode.append(f"{desc} ({t})")
                  else:
                      text_to_encode.append(t)
                      
@@ -115,12 +126,19 @@ class AdvancedSimilarityEngine:
                 hub_bonus += 0.3
 
             # Combine
-            # If semantic is off, we scale up lexical/hub to act as the primary score
             if self.use_semantic:
+                # If we have descriptions, we trust semantics much more than lexical overlap
+                # to avoid being baited by similar names (e.g., Tadej Pogacar vs other Tadej)
+                s_weight, l_weight, h_weight = SEMANTIC_WEIGHT, LEXICAL_WEIGHT, HUB_WEIGHT
+                if descriptions:
+                    s_weight = 0.75
+                    l_weight = 0.15
+                    h_weight = 0.10
+                
                 score = (
-                    SEMANTIC_WEIGHT * semantic_scores[i] +
-                    LEXICAL_WEIGHT * lexical_score +
-                    HUB_WEIGHT * min(hub_bonus, 1.0)
+                    s_weight * semantic_scores[i] +
+                    l_weight * lexical_score +
+                    h_weight * min(hub_bonus, 1.0)
                 )
             else:
                 # "Lexical only" mode re-weights: 70% lexical, 30% hub
@@ -148,6 +166,7 @@ class WikipediaChallenger:
         self.lang = lang
         self._cancelled = False
         self.similarity_engine = None
+        self.current_model_name = None
 
     def _log(self, message: str):
         if self.log_callback:
@@ -158,20 +177,38 @@ class WikipediaChallenger:
     def cancel(self):
         self._cancelled = True
 
-    def _init_similarity_engine(self, target_title: str, mode: str):
+    def _init_similarity_engine(self, target_title: str, mode: str, use_metadata: bool = False):
         # Re-init if mode changed or engine missing
         use_semantic = (mode == "semantic")
         
+        # Determine model name based on metadata usage
+        target_model = "all-mpnet-base-v2" if use_metadata else "all-MiniLM-L6-v2"
+        
         # If we need semantic but current engine is lexical-only, force re-init
-        if self.similarity_engine and self.similarity_engine.use_semantic != use_semantic:
-            self.similarity_engine = None
-            
+        # OR if the model needs to be switched
+        if self.similarity_engine:
+            if self.similarity_engine.use_semantic != use_semantic:
+                 self.similarity_engine = None
+            elif use_semantic and self.current_model_name != target_model:
+                 self.similarity_engine = None
+
         if not self.similarity_engine:
             if use_semantic:
-                self._log("Loading semantic AI model…")
-            self.similarity_engine = AdvancedSimilarityEngine(self.lang, use_semantic=use_semantic)
+                self._log(f"Loading semantic AI model ({target_model}) on {torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'}…")
+            self.similarity_engine = AdvancedSimilarityEngine(
+                self.lang, 
+                use_semantic=use_semantic,
+                model_name=target_model
+            )
+            self.current_model_name = target_model
             
-        self.similarity_engine.set_target(target_title)
+        # Fetch target metadata if possible to enrich the comparison
+        target_desc = ""
+        if use_metadata:
+            metadata = self.api.get_metadata_batch([target_title])
+            target_desc = metadata.get(target_title, "")
+            
+        self.similarity_engine.set_target(target_title, target_description=target_desc)
 
     def find_shortest_path(
         self, start_title: str, end_title: str, mode: str = "semantic", use_metadata: bool = False
@@ -195,7 +232,7 @@ class WikipediaChallenger:
         
         # Initialize engine unless bruteforce
         if mode != "bruteforce":
-            self._init_similarity_engine(end_norm, mode)
+            self._init_similarity_engine(end_norm, mode, use_metadata=use_metadata)
 
         if start_norm == end_norm:
             return {"path": [start_norm], "clicks": 0,
